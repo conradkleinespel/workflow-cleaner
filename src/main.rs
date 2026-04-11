@@ -11,7 +11,7 @@ use reqwest::Error;
 #[command(author, version, about, long_about = None)]
 struct Cli {
     /// Delete workflow runs older than this duration (e.g., 30d, 5m, 4w)
-    #[arg(long, value_name = "DURATION")]
+    #[arg(long, value_name = "DURATION", default_value = "30d")]
     delete_older_than: HumanDuration,
 }
 
