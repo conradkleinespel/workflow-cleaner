@@ -66,7 +66,10 @@ fn create_http_client_and_headers() -> Result<(Client, HeaderMap)> {
         HeaderValue::from_str(&format!("token {}", token))
             .context("Failed to create auth header")?,
     );
-    headers.insert(USER_AGENT, HeaderValue::from_static("rust-script"));
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_static("conradkleinespel/workflow-cleaner"),
+    );
     Ok((client, headers))
 }
 
