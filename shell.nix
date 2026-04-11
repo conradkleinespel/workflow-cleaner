@@ -1,21 +1,13 @@
-{pkgs ? import <nixpkgs> {}}: let
-  code = pkgs.writeShellApplication {
-    name = "code";
-    text = ''
-      nohup idea nosplash . &>/dev/null & disown
-    '';
-  };
-in
-  pkgs.mkShell {
-    buildInputs = with pkgs; [
-      rustup
-      rustPlatform.rustLibSrc
-      pkg-config
-      openssl.dev
-      code
-    ];
+{pkgs ? import <nixpkgs> {}}:
+pkgs.mkShell {
+  buildInputs = with pkgs; [
+    rustup
+    pkg-config
+    openssl.dev
+  ];
 
-    shellHook = ''
-      export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}"
-    '';
-  }
+  shellHook = ''
+    rustup default stable
+    rustup component add rust-src
+  '';
+}
