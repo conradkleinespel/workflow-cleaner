@@ -3,9 +3,9 @@ use clap::Parser;
 use humantime::Duration as HumanDuration;
 use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, USER_AGENT};
+use reqwest::Error;
 use serde::Deserialize;
 use std::env;
-use reqwest::Error;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -62,15 +62,23 @@ fn fetch_repos(client: &Client, headers: &HeaderMap) -> Vec<String> {
     let per_page = 100;
 
     loop {
-        let url = format!("https://api.github.com/user/repos?per_page={}&page={}", per_page, page);
+        let url = format!(
+            "https://api.github.com/user/repos?per_page={}&page={}",
+            per_page, page
+        );
         let response = client
             .get(&url)
             .headers(headers.clone())
             .send()
             .expect("Failed to fetch repos");
-        
+
+        if [401u16, 403u16].contains(&response.status().as_u16()) {
+            println!("Error: Invalid GITHUB_TOKEN: has it expired? does it have the correct permissions?");
+            return vec![];
+        }
+
         let repos: Vec<Repo> = response.json().expect("Failed to parse repos");
-        
+
         if repos.is_empty() {
             break;
         }
@@ -82,13 +90,21 @@ fn fetch_repos(client: &Client, headers: &HeaderMap) -> Vec<String> {
     all_repos
 }
 
-fn delete_workflow_runs(client: Client, headers: HeaderMap, cutoff_date: DateTime<Utc>, repo: &str) -> Result<i32, Error> {
+fn delete_workflow_runs(
+    client: Client,
+    headers: HeaderMap,
+    cutoff_date: DateTime<Utc>,
+    repo: &str,
+) -> Result<i32, Error> {
     let mut all_runs_to_delete = Vec::new();
     let mut page = 1;
     let per_page = 100;
 
     loop {
-        let url = format!("https://api.github.com/repos/{}/actions/runs?per_page={}&page={}", repo, per_page, page);
+        let url = format!(
+            "https://api.github.com/repos/{}/actions/runs?per_page={}&page={}",
+            repo, per_page, page
+        );
 
         let response = client.get(&url).headers(headers.clone()).send()?;
         let json_object = response.json::<WorkflowRunsResponse>()?;
@@ -106,12 +122,12 @@ fn delete_workflow_runs(client: Client, headers: HeaderMap, cutoff_date: DateTim
             }
         }
 
-        // If we found NO old runs on this page, and since they are sorted descending 
+        // If we found NO old runs on this page, and since they are sorted descending
         // (newest first), all runs on subsequent pages will also be newer than cutoff.
         if !has_old_runs {
             break;
         }
-        
+
         page += 1;
     }
 
